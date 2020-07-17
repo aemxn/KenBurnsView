@@ -15,19 +15,13 @@
   ~ limitations under the License.
   -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.flaviofaria.kenburnsview.sample"
-    android:versionCode="3"
-    android:versionName="1.0.2" >
+    package="com.flaviofaria.kenburnsview.sample">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    
-    <uses-sdk
-        android:minSdkVersion="8"
-        android:targetSdkVersion="19" />
 
     <application android:label="@string/app_name"
-        android:icon="@drawable/icon"
-        android:theme="@style/Theme.Sherlock">
+        android:icon="@drawable/ic_launcher"
+        android:theme="@style/Theme.AppCompat">
 
         <activity
             android:name=".MainActivity">

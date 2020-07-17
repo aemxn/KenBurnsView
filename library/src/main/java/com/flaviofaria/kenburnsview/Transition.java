@@ -30,15 +30,15 @@ public class Transition {
     /** An intermediary rect that changes in every frame according to the transition progress. */
     private final RectF mCurrentRect = new RectF();
 
-    /** Precomputed width difference between {@link #mSrcRect} and {@link #mSrcRect}. */
+    /** Precomputed width difference between {@link #mSrcRect} and {@link #mDstRect}. */
     private float mWidthDiff;
-    /** Precomputed height difference between {@link #mSrcRect} and {@link #mSrcRect}. */
+    /** Precomputed height difference between {@link #mSrcRect} and {@link #mDstRect}. */
     private float mHeightDiff;
     /** Precomputed X offset between the center points of
-     *  {@link #mSrcRect} and {@link #mSrcRect}. */
+     *  {@link #mSrcRect} and {@link #mDstRect}. */
     private float mCenterXDiff;
     /** Precomputed Y offset between the center points of
-     *  {@link #mSrcRect} and {@link #mSrcRect}. */
+     *  {@link #mSrcRect} and {@link #mDstRect}. */
     private float mCenterYDiff;
 
     /** The duration of the transition in milliseconds. The default duration is 5000 ms. */
@@ -49,11 +49,7 @@ public class Transition {
 
 
     public Transition(RectF srcRect, RectF dstRect, long duration, Interpolator interpolator) {
-        // Reduces precision to avoid problems when comparing aspect ratios.
-        float srcRectRatio = MathUtils.truncate(MathUtils.getRectRatio(srcRect), 2);
-        float dstRectRatio = MathUtils.truncate(MathUtils.getRectRatio(dstRect), 2);
-
-        if (srcRectRatio != dstRectRatio) {
+        if (!MathUtils.haveSameAspectRatio(srcRect, dstRect)) {
             throw new IncompatibleRatioException();
         }
         mSrcRect = srcRect;

@@ -116,9 +116,6 @@ public class KenBurnsView extends ImageView {
     @Override
     public void setImageBitmap(Bitmap bm) {
         super.setImageBitmap(bm);
-
-        updateDrawableBounds();
-
         handleImageChange();
     }
 
@@ -126,9 +123,6 @@ public class KenBurnsView extends ImageView {
     @Override
     public void setImageResource(int resId) {
         super.setImageResource(resId);
-
-        updateDrawableBounds();
-
         handleImageChange();
     }
 
@@ -136,9 +130,6 @@ public class KenBurnsView extends ImageView {
     @Override
     public void setImageURI(Uri uri) {
         super.setImageURI(uri);
-
-        updateDrawableBounds();
-
         handleImageChange();
     }
 
@@ -146,9 +137,6 @@ public class KenBurnsView extends ImageView {
     @Override
     public void setImageDrawable(Drawable drawable) {
         super.setImageDrawable(drawable);
-
-        updateDrawableBounds();
-
         handleImageChange();
     }
 
@@ -156,7 +144,7 @@ public class KenBurnsView extends ImageView {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        updateViewPort(w, h);
+        restart();
     }
 
 
@@ -164,9 +152,9 @@ public class KenBurnsView extends ImageView {
     protected void onDraw(Canvas canvas) {
         Drawable d = getDrawable();
         if (!mPaused && d != null) {
-            updateDrawableBounds();
-            // No drawable to animate or bounds are yet to be set? We're done for now.
-            if (!mDrawableRect.isEmpty()) {
+            if (mDrawableRect.isEmpty()) {
+                updateDrawableBounds();
+            } else if (hasBounds()) {
                 if (mCurrentTrans == null) { // Starting the first transition.
                     startNewTransition();
                 }
@@ -180,7 +168,9 @@ public class KenBurnsView extends ImageView {
                     // Scale to make the current rect match the smallest drawable dimension.
                     float currRectToDrwScale = Math.min(widthScale, heightScale);
                     // Scale to make the current rect match the viewport bounds.
-                    float currRectToVpScale = mViewportRect.width() / currentRect.width();
+                    float vpWidthScale = mViewportRect.width() / currentRect.width();
+                    float vpHeightScale = mViewportRect.height() / currentRect.height();
+                    float currRectToVpScale = Math.min(vpWidthScale, vpHeightScale);
                     // Combines the two scales to fill the viewport with the current rect.
                     float totalScale = currRectToDrwScale * currRectToVpScale;
 
@@ -195,7 +185,6 @@ public class KenBurnsView extends ImageView {
                     mMatrix.postTranslate(translX, translY);
 
                     setImageMatrix(mMatrix);
-                    postInvalidateDelayed(FRAME_DELAY);
 
                     // Current transition is over. It's time to start a new one.
                     if (mElapsedTime >= mCurrentTrans.getDuration()) {
@@ -207,6 +196,7 @@ public class KenBurnsView extends ImageView {
                 }
             }
             mLastFrameTime = System.currentTimeMillis();
+            postInvalidateDelayed(FRAME_DELAY);
         }
         super.onDraw(canvas);
     }
@@ -216,10 +206,40 @@ public class KenBurnsView extends ImageView {
      * Generates and starts a transition.
      */
     private void startNewTransition() {
+        if (!hasBounds()) {
+            return; // Can't start transition if the drawable has no bounds.
+        }
         mCurrentTrans = mTransGen.generateNextTransition(mDrawableRect, mViewportRect);
         mElapsedTime = 0;
         mLastFrameTime = System.currentTimeMillis();
         fireTransitionStart(mCurrentTrans);
+    }
+
+
+    /**
+     * Creates a new transition and starts over.
+     */
+    public void restart() {
+        int width = getWidth();
+        int height = getHeight();
+
+        if (width == 0 || height == 0) {
+            return; // Can't call restart() when view area is zero.
+        }
+
+        updateViewport(width, height);
+        updateDrawableBounds();
+
+        startNewTransition();
+    }
+
+
+    /**
+     * Checks whether this view has bounds.
+     * @return
+     */
+    private boolean hasBounds() {
+        return !mViewportRect.isEmpty();
     }
 
 
@@ -260,22 +280,22 @@ public class KenBurnsView extends ImageView {
      * @param width the new viewport with.
      * @param height the new viewport height.
      */
-    private void updateViewPort(float width, float height) {
+    private void updateViewport(float width, float height) {
         mViewportRect.set(0, 0, width, height);
     }
 
 
     /**
-     * Updates the drawable bounds rect. THis must be called every time the drawable
+     * Updates the drawable bounds rect. This must be called every time the drawable
      * associated to this view changes.
      */
     private void updateDrawableBounds() {
+        if (mDrawableRect == null) {
+            mDrawableRect = new RectF();
+        }
         Drawable d = getDrawable();
-        if (d != null) {
-            if (mDrawableRect == null) {
-                mDrawableRect = new RectF();
-            }
-            mDrawableRect.set(d.getBounds());
+        if (d != null && d.getIntrinsicHeight() > 0 && d.getIntrinsicWidth() > 0) {
+            mDrawableRect.set(0, 0, d.getIntrinsicWidth(), d.getIntrinsicHeight());
         }
     }
 
@@ -285,9 +305,11 @@ public class KenBurnsView extends ImageView {
      * is changed.
      */
     private void handleImageChange() {
+        updateDrawableBounds();
         /* Don't start a new transition if this event
          was fired during the super constructor execution.
-         The view won't be ready at this time. */
+         The view won't be ready at this time. Also,
+         don't start it if this view size is still unknown. */
         if (mInitialized) {
             startNewTransition();
         }
